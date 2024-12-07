@@ -6,11 +6,13 @@ import {
   update,
   destroy,
 } from "../data/managers/user.manager.js";
-import { verifyUser } from "../middlewares/verifyUser.mid.js";
+import { verifyTokenUtil } from "../utils/token.util.js";
 
 export const login = async (req, res, next) => {
   try {
-    res.status(200).json(req.session.userId);
+    const token= req.token
+    req.cookie(token,{maxAge:60*60*1000*24,signed:true,httpOnly:true})
+    res.status(200).json({message:"Usuario logeado correctamente"});
   } catch (error) {
     return next(error);
   }
@@ -26,11 +28,16 @@ export const register = async (req, res, next) => {
 
 export const online = async (req, res, next) => {
   try {
-    const session = req.session;
-    if (session.userId) {
-      return res.status(200).json({ message: "Usuario ya esta conectado" });
+    const token = req.cookies.token
+    if(!token){
+      return res.status(400).json({message:"Usuario no conectado",online:false})
     }
-    return res.status(400).json({ message: "Usuario no esta conectado" });
+    const {user} = verifyTokenUtil(token)
+    const userOnline = await readById(user)
+    if (userOnline) {
+      return res.status(200).json({ message: "Usuario conectado",online : true });
+    }
+    return res.status(401).json({ message: "Bad Credentials" , online : false});
   } catch (error) {
     return next(error);
   }
@@ -38,9 +45,8 @@ export const online = async (req, res, next) => {
 
 export const signOut = async (req, res, next) => {
     try {
-        const session = req.session
-        session.destroy()
-        return res.status(200).json({message:"Usuario desconectado con exito" + JSON.stringify(session)})
+        req.clearCookie("token")
+        return res.status(200).json({message:"Usuario desconectado con exito"})
     } catch (error) {
         return next(error);
     }
