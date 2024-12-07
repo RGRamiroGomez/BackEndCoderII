@@ -10,7 +10,7 @@ const router = Router();
 
 router.post("/register",passport.authenticate("register",{session:false}) ,register);
 
-router.post("/login", verifyUser,verifyHash,login);
+router.post("/login", passport.authenticate("login",{session:false}),login);
 
 router.post("/online", online)
 
